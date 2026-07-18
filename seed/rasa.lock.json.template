@@ -1,0 +1,13 @@
+{
+  "lock_version": 1,
+  "element": {
+    "name": "{{ELEMENT_NAME}}",
+    "kind": "{{ELEMENT_KIND}}",
+    "version": "{{ELEMENT_VERSION}}",
+    "repo": "{{ELEMENT_REPO}}",
+    "branch": "{{ELEMENT_BRANCH}}"
+  },
+  "pinned_sha": "{{ELEMENT_SHA}}",
+  "installed_at": "{{TODAY}}",
+  "overrides": []
+}

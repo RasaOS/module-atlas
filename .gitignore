@@ -1,0 +1,14 @@
+# macOS / editor cruft
+.DS_Store
+._*
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Python bytecode (the atlas converters ship as source only)
+__pycache__/
+*.pyc
+
+# Temp install artifacts
+.claude/rasa.lock.json

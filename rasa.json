@@ -1,0 +1,113 @@
+{
+  "$schema": "https://rasa-os.github.io/schema/rasa.schema.v1.json",
+  "contract_version": "1.3.0",
+  "name": "rasa.module.atlas",
+  "version": "0.1.0",
+  "kind": "module",
+  "aliases": [
+    "module-atlas"
+  ],
+  "description": "Portable geospatial catalog, mountable into any domain or orchestrator. Where rasa.module.research tracks investigations (deep, few) and rasa.module.theory tracks patterns, this tracks PLACES — a light, greppable, color-keyed catalog of located records that scales to thousands. One site is one markdown file under atlas/sites/<id-block>/site-NNNNNN.md: immutable id, correctable name, canonical lon/lat/alt stored once, a coord_precision, a single `category` field that is the color-key join (a field, never a folder), flat reused substrate links (tags/related/sources), a verbatim `provenance` block and an `extended` overflow bag that together make KML/spreadsheet import→export→re-import a lossless fixed point. The category→color key is a project-owned .claude/atlas-canon.md seam authored once as #RRGGBB and rendered by pure function to KML IconStyle (aabbggrr) and GeoJSON marker-color; inventing a category (and thus a color) is the one inference the module refuses to make. Deterministic Python converters (import/export/render) ship in content/skills/atlas/ so 1300-row round-trips never drift. A site GRADUATES to a research topic when it warrants deep study, is EVIDENCE for a theory prediction, CITES library sources, and is DESCRIBED with lexicon terms — all soft, present-if-mounted. Ships zero subject content.",
+  "source": {
+    "repo": "https://github.com/RasaOS/module-atlas",
+    "branch": "main"
+  },
+  "tier": "Pro",
+  "capabilities": [
+    "atlas.site-catalog",
+    "atlas.color-key",
+    "atlas.kml-roundtrip",
+    "atlas.geojson-export",
+    "atlas.geo-provenance"
+  ],
+  "permissions": [
+    "fs:read",
+    "fs:write",
+    "shell:exec"
+  ],
+  "requires": {
+    "parent_kind": [
+      "domain",
+      "tenant"
+    ]
+  },
+  "rasa": {
+    "role": "L1-mountable-capability",
+    "shape_pattern": "toolkit",
+    "note": "Greenfield module, author-requested (2026-07-18) as the first of a (latent) catalog family. A SITE is a light located record — a generalization of a src-NNNN / timeline entry, NOT a lightweight research topic — so the node is one markdown file per site, sharded classification-free on the id (blocks of 1000), category as a field never a folder. The horizontal core is the file-per-site node + the category→color mechanism + the lossless KML/GeoJSON round-trip, all in content/atlas-rules.md. The one vertical concern — the category→color taxonomy — lives in the project-owned .claude/atlas-canon.md seam, and is the module's single hard-stop: export/legend refuse to derive a color for an in-use category absent from the seam (inventing a category is the one inference the module won't make). Design decisions locked at v0.1.0 (four-design/two-judge review): (1) file-per-site sharded by id — directory-per-category is rejected (reclassification would be a file move that breaks every link) and a single data-file is rejected (a cell can't hold prose links / @path / a provenance excerpt); (2) site-NNNNNN id — a located record is CITED by id like a source, not linked by slug like a topic — zero-padded to a FIXED 6 digits (1M headroom) so growth never renames a file or an @path; (3) losslessness = canonical facts stored once + derived styling + a verbatim provenance block + an `extended` overflow bag, proven by an import→export→re-import fixed-point fixture (the release gate); (4) DETERMINISTIC Python converters ship under content/skills/atlas/ (blessed by the author for the fleet — lossless conversion of 1300 rows must be code, not LLM prose; covered by the directory-mirror ancestor rule, no new manifest slots); (5) unknown categories are STAGED on import and reported (a bulk load never halts) — the hard-stop fires at export/legend; (6) the INDEX is a dashboard + color legend + health block — the generated atlas.geojson/atlas.kml is the real at-a-glance rollup, never a 10k-row markdown table; (7) coupling to sibling modules is SOFT (requires.elements[] empty) — a site graduates to a research topic, is evidence for a theory, cites library/lexicon ids; drop any sibling and the catalog stays valid; (8) the four longitudinal/cross-unit disciplines (a verification cadence clock default-OFF, contested/held-open geography, a cross-site sightline registry aln-NNNN, a dated survey/observation axis — the home for archaeoastronomical alignment) are ADDED BY the consuming domain (rasa.domain.proverbs), never absorbed here; (9) a general module.catalog base stays LATENT — extracted only when a second consumer (a minerals property-catalog) proves the pattern, recorded as a BUILD_PLAN note. Ships the /atlas driver at v0.1.0 (unlike module.theory, which deferred its driver) because the color-keyed round-trip IS the ask; spatial queries (near/bbox/region) wait for v0.2.0. contract_version stays 1.3.0 — authored to canon v1.4.0 rules, declaring the last LOCKED + published contract like the rest of the fleet; migration is a coordinated bin/lock-sequence, never a per-element bump.",
+    "identity": {
+      "one_liner": "the RasaOS module for a light, color-keyed geospatial catalog of places — thousands of located records with a lossless KML/GeoJSON round-trip",
+      "role": "module",
+      "subject": "geospatial site cataloguing (located records + a category color key)",
+      "goal": "bring geospatial cataloguing into a project as an installable RasaOS module — one light file per place, a project-owned category→color key rendered to KML + GeoJSON, and a lossless import/export round-trip that scales to the largest personal library of sites"
+    }
+  },
+  "element": {
+    "description": "Element-owned atlas files mirrored into the install target's .claude/ per canon ELEMENT_CONTRACT.md §7. Refreshed on Element upgrade. The color-key seam and the live site corpus are NOT here — they are project-owned (see seed.files).",
+    "files": [
+      {
+        "from": "content/atlas-rules.md",
+        "to": ".claude/atlas-rules.md",
+        "policy": "file-replace",
+        "note": "The portable atlas spine: the file-per-site node (site-NNNNNN, canonical lon/lat/alt, coord_precision, category, provenance + extended overflow), the id-block sharding, the category→color mechanism + the lossless KML/GeoJSON round-trip contract, the fixed-point release gate, the INDEX-as-dashboard convention, the O(n) geo-queries (v0.2), the graduate-to-topic + theory-evidence + cite-source seams, and the single color-key hard-stop. Element-owned; refreshed on upgrade. References .claude/atlas-canon.md for the per-project color key; hardcodes none of it. Distinct filename (atlas-rules.md) so it never collides with research-rules.md / theory-rules.md on co-mount."
+      },
+      {
+        "from": "content/atlas-template/",
+        "to": ".claude/atlas-template/",
+        "policy": "directory-mirror",
+        "note": "The single-file per-site skeleton (site.md) that /atlas new instantiates into atlas/sites/<id-block>/site-NNNNNN.md, with {{SITE_ID}}/{{SITE_NAME}}/{{CATEGORY}}/{{LON}}/{{LAT}}/{{TODAY}} placeholders. A single-file template (a site is a file-node), a justified divergence from the folder-node templates of research/theory. Element-owned; refreshed on upgrade."
+      },
+      {
+        "from": "content/skills/",
+        "to": ".claude/skills/",
+        "policy": "directory-mirror",
+        "note": "The /atlas driver skill AND its deterministic Python converters (skills/atlas/{lib,import,export,render_key}.py — blessed to ship runnable code inside content/skills/, covered by this ancestor match), plus the inherited house skills /sync, /promote, /whoami (byte-identical to the sibling modules — a harmless co-mount overwrite). Element-owned; refreshed on upgrade."
+      },
+      {
+        "from": "content/README.md",
+        "to": "content/README.md",
+        "policy": "opt-in",
+        "note": "Describes what this module ships and how it installs. Fork/author-time doc; not installed into consumer projects."
+      },
+      {
+        "from": "content/BUILD_PLAN.md",
+        "to": "content/BUILD_PLAN.md",
+        "policy": "opt-in",
+        "note": "The v0.1.0 specification + design record (why file-per-site, the id scheme, the color-key + round-trip contract, the deterministic-converter decision, the cross-family seams, what the consuming domain adds, the latent catalog-family plan, the version plan). Author-time doc; not installed into consumer projects."
+      }
+    ]
+  },
+  "seed": {
+    "description": "One-time, project-owned files copied at install only (skip-if-exists), per canon ELEMENT_CONTRACT.md §7. These belong to the consuming project after install and are never overwritten on Element upgrade — the color-key seam and the live index.",
+    "files": [
+      {
+        "from": "seed/atlas-canon.md.template",
+        "to": ".claude/atlas-canon.md",
+        "policy": "skip-if-exists",
+        "note": "The per-project adapter seam — the category→color taxonomy (authored once as #RRGGBB, plus label/symbol/kml_icon), the atlas root, and near-duplicate/precision policy. Project-owned; the export/legend hard-stops on an in-use category absent here. Ships placeholder-free with commented per-vertical examples per the documented skip-if-exists policy gap."
+      },
+      {
+        "from": "seed/atlas/INDEX.md.template",
+        "to": "atlas/INDEX.md",
+        "policy": "skip-if-exists",
+        "note": "The atlas dashboard — counts + the color legend + a health block (color-disagreements, staged-unknown categories, provisional-past-cadence). NOT a per-site table: the generated atlas.geojson/atlas.kml are the real at-a-glance rollup. Project-owned; seeding this file also creates the atlas/ corpus root."
+      },
+      {
+        "from": "seed/rasa.lock.json.template",
+        "to": ".claude/rasa.lock.json",
+        "policy": "init-only-with-sha",
+        "note": "Stamped with the Element HEAD commit SHA at init time. Lockfile shape per canon Spec §6 (Connection Contract). When co-installed under a parent that also stamps a lockfile, the parent's is authoritative (single-writer-per-path, Lock L-004). Substitutes {{ELEMENT_NAME}}, {{ELEMENT_KIND}}, {{ELEMENT_VERSION}}, {{ELEMENT_REPO}}, {{ELEMENT_BRANCH}}, {{ELEMENT_SHA}}, {{TODAY}} via bin/init."
+      },
+      {
+        "from": "seed/rasa-deployment.md.template",
+        "to": ".claude/rasa-deployment.md",
+        "policy": "skip-if-exists",
+        "note": "The DEPLOYMENT identity layer (SA-025) — project-owned; what this project is, for whom, on what platform. bin/init generates the element layer (.claude/rasa-identity.md) from rasa.identity every install."
+      }
+    ]
+  },
+  "scaffold": {
+    "description": "Empty directories created at init by the declarative installer. The atlas/ root ships via the seeded INDEX.md; per-site files are created on demand by /atlas new or /atlas import. So this stays empty (bin/init does not implement scaffold.directories).",
+    "directories": []
+  }
+}

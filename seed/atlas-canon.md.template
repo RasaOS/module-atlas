@@ -1,0 +1,76 @@
+# Atlas Canon — project adapter seam (the color key)
+
+This is the **one file `rasa.module.atlas` does not decide for you.** It holds the
+category→color taxonomy — the only thing that genuinely varies per project. It is
+**project-owned**: seeded once at install and never overwritten on Element upgrade.
+Fill it in.
+
+The portable discipline (the site node, the id scheme, the losslessness contract,
+the KML/GeoJSON round-trip) lives in `.claude/atlas-rules.md` and refreshes on
+upgrade. This seam is where *your project's* categories + colors go. `/atlas
+export` and the legend **hard-stop** if a site uses a category not listed below —
+inventing a category, and therefore a color, is the one inference the module
+refuses to make.
+
+---
+
+## 1. `atlas_root`
+
+Where site folders and `INDEX.md` live, relative to the project root.
+
+    atlas_root: atlas/
+
+<!-- Default `atlas/`. Deliberately singular — one atlas may hold several record
+     collections over its life. -->
+
+---
+
+## 2. `categories` — the color key
+
+The controlled taxonomy: one line per category, authored once as `#RRGGBB`. The
+converters render each to KML `<IconStyle>` (`aabbggrr`) + GeoJSON `marker-color`
++ the INDEX legend swatch — so a color change here is a one-line edit that
+propagates everywhere. Each entry:
+
+    <key>: { label: "<human label>", color: "#RRGGBB", symbol: <name>, kml_icon: "<google-kml-icon-path>" }
+
+The shipped template keeps every example **commented** (placeholder-free per the
+skip-if-exists policy): uncomment/replace with YOUR categories.
+
+    categories:
+      # water-source: { label: "Water source", color: "#1b9e77", symbol: drop,     kml_icon: "paddle/wht-blank" }
+      # structure:    { label: "Structure",     color: "#d95f02", symbol: building, kml_icon: "paddle/wht-blank" }
+      # hazard:       { label: "Hazard",         color: "#e7298a", symbol: danger,  kml_icon: "paddle/wht-blank" }
+
+<!-- Palette discipline (see atlas-rules.md):
+     - Assign colors by an explicit table, NEVER a hash of the name (a rename
+       would re-jitter every color).
+     - NEVER recycle a category key (same rule as ids).
+     - Past ~8-12 distinct hues, add a second channel: hue = family, lightness =
+       member (hazard-fire / hazard-flood / hazard-slide as deepening reds), and
+       `symbol` as a third — rather than more near-identical hues.
+     - Start from a proven categorical palette (ColorBrewer Dark2 / Okabe-Ito),
+       freeze the order.
+     `symbol` maps to GeoJSON marker-symbol (Mapbox/GitHub); `kml_icon` is the
+     Google-hosted KML icon href tail (…/mapfiles/kml/<kml_icon>.png), tinted by
+     the category color. -->
+
+---
+
+## 3. `coord_precision_default` — optional
+
+The `coord_precision` to assume when a source doesn't state one.
+
+    coord_precision_default: unknown        # exact | approximate | rough | unknown
+
+<!-- Leave `unknown` unless your source is uniformly one precision. Never let the
+     importer invent `exact`. -->
+
+---
+
+## 4. `near_duplicate_km` — optional
+
+The distance under which two same-named sites are surfaced as possible
+duplicates (never auto-merged).
+
+    near_duplicate_km: 0.05
