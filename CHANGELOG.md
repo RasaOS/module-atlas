@@ -4,6 +4,41 @@ Reverse-chronological. Each entry is a version bump.
 
 ---
 
+## 0.3.0 — 2026-07-19
+
+### Live Google Earth view — a NetworkLink loader + a re-export-on-save watch loop
+
+- **`atlas-live.kml`** — a KML export now also writes a companion Google Earth
+  **NetworkLink** loader that re-reads `atlas.kml` every 2s. Open it once in Google
+  Earth **Pro** and a `/atlas export` appears without re-importing; the camera view is
+  preserved (`flyToView=0`). The loader's `href` is **relative** (`atlas.kml`) so it is
+  portable and hardcodes no path; the machine-absolute path is written into its
+  `<description>` as a fallback for GE builds that don't resolve the relative link. It is
+  the one *generated* artifact allowed to name a local path, and only inside a deployment.
+  Subject-neutral (the module ships zero subject content).
+- **`/atlas watch [interval]`** (`content/skills/atlas/watch.py`) — a foreground,
+  stdlib-only loop that re-runs the exporter whenever a site record or the color-key seam
+  changes, so the live view updates hands-free. **No self-trigger:** exports land in the
+  atlas root while the watch is on `sites/` + the seam. A failed export (e.g. an unknown
+  category) is reported and does not stop the loop; fix the seam and the next save
+  re-exports. Debounced so a burst of saves collapses to one export.
+- **Watcher hardening** (adversarial-review pass): change detection is a **content
+  digest**, not `(count, max-mtime)` — so a same-second second edit (this workspace's
+  HFS/USB has 1-second mtime) and an mtime-preserving restore are both caught, while a
+  pure `touch` is correctly ignored. The baseline is armed on the **pre-export** snapshot
+  so an edit that lands *during* an export re-fires instead of being swallowed. The
+  `interval` arg is validated (non-numeric / ≤0 → default with a warning, never a
+  busy-loop or a raw traceback); Ctrl-C during the initial export exits cleanly; and
+  output is line-buffered so status streams even when piped. The loader's empty-map hint
+  now names the `Sites (auto-refresh)` node that actually carries the editable `<Link>`,
+  and the absolute-path fallback is emitted via `pathlib.as_uri()` (a valid `file://` URI
+  on POSIX and Windows).
+- Gate extended: the round-trip fixture now asserts the loader is emitted, is well-formed
+  XML, and points at the relative `atlas.kml`; and that `watch.signature()` flips on a
+  record change (drives the auto-export). `bin/check-manifest` + `test/roundtrip_test.py`
+  GREEN. Requires Google Earth Pro desktop — local network links are unsupported in
+  Google Earth Web.
+
 ## 0.2.0 — 2026-07-19
 
 ### Feature geometry — the atlas is now a point/line/polygon catalog (not point-only)

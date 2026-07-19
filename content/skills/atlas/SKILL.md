@@ -41,8 +41,15 @@ Run the helpers from `.claude/skills/atlas/` (paths relative to the project root
   KML/KMZ/CSV in; reports staged categories + near-duplicates. Review the report,
   add staged categories to the seam, then stage the new site files.
 - **`/atlas export [kml|geojson|both]`** — `python3 .claude/skills/atlas/export.py <root> <canon> [both]`.
-  Writes `atlas/atlas.kml` + `atlas/atlas.geojson`. Hard-stops on an unknown
-  category — surface the list, stop, ask the user to add them to the seam.
+  Writes `atlas/atlas.kml` + `atlas/atlas.geojson`, and (on `kml`/`both`) a companion
+  `atlas/atlas-live.kml` — a Google Earth NetworkLink loader for a live-updating view.
+  Hard-stops on an unknown category — surface the list, stop, ask the user to add them
+  to the seam.
+- **`/atlas watch [interval]`** — `python3 .claude/skills/atlas/watch.py <root> <canon> [interval]`.
+  A foreground loop that re-exports on every record/seam change, so a Google Earth **Pro**
+  NetworkLink (open `atlas/atlas-live.kml` once) updates hands-free. No self-trigger
+  (exports land in the atlas root, the watch is on `sites/` + the seam); Ctrl-C to stop.
+  Local network links need Google Earth Pro desktop — not Google Earth Web.
 - **`/atlas key`** — `python3 .claude/skills/atlas/render_key.py <canon>` to show
   the KML styles + the INDEX legend the color key renders to.
 - **`/atlas index`** — regenerate the `atlas/INDEX.md` dashboard: counts by

@@ -239,6 +239,13 @@ lossless conversion of thousands of rows must be code, or they silently drift.
   geometry `[lon,lat,alt]`; `properties` carries `name`, `category`,
   `marker-color` (from the palette), `entry_id`, and the `extended` bag
   (simplestyle-spec, honored by GitHub/Mapbox).
+- **Live loader** — a KML export also writes `atlas/atlas-live.kml`, a Google Earth
+  **NetworkLink** that re-reads `atlas.kml` on an interval. Open it once in Google
+  Earth **Pro** (local network links are unsupported in Google Earth Web) and a
+  re-export appears without re-importing; `/atlas watch` re-exports on every record
+  change for a hands-free loop. The loader's `href` is relative (portable), with the
+  machine-absolute path written into its description as a fallback — it is the one
+  generated artifact allowed to name a local path, and only inside a deployment.
 - **Hard-stop** on any in-use category absent from the seam.
 
 ## The INDEX — a dashboard, not a table

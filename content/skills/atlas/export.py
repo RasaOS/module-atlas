@@ -17,6 +17,7 @@ Standard library only.
 import glob
 import json
 import os
+import pathlib
 import sys
 from xml.sax.saxutils import escape
 
@@ -130,6 +131,55 @@ def build_kml(sites, cats):
     )
 
 
+LIVE_REFRESH_SECONDS = 2
+
+
+def build_live_kml(atlas_root):
+    """A Google Earth NetworkLink loader for a live-updating view of atlas.kml. Opened
+    once in Google Earth Pro, it re-reads atlas.kml (same folder) on an interval, so a
+    re-export appears without re-importing. The href is RELATIVE (portable — moves with
+    the folder, hardcodes no path); the machine-specific absolute path is written into
+    the description as a fallback for GE builds that don't resolve the relative link.
+    Subject-neutral by design — the module ships zero subject content."""
+    abspath = os.path.abspath(os.path.join(atlas_root, "atlas.kml"))
+    uri = pathlib.Path(abspath).as_uri()   # portable file:// URI (POSIX and Windows)
+    desc = (
+        "Auto-refreshing view of this atlas. Re-reads atlas.kml (same folder) every "
+        f"{LIVE_REFRESH_SECONDS}s, so anything you regenerate with /atlas export appears "
+        "in Google Earth automatically; your camera view is preserved.\n\n"
+        "WORKFLOW: edit or add site records, then run  /atlas export both  — Google "
+        "Earth updates on the next tick. Or run  /atlas watch  to re-export on save "
+        "automatically.\n\n"
+        "REQUIRES Google Earth PRO (desktop). Local network links do not work in "
+        "Google Earth Web (a browser security limit).\n\n"
+        "IF THE MAP IS EMPTY the relative link did not resolve on your build: right-click "
+        "the 'Sites (auto-refresh)' item in Places -> Properties -> Link, and set the "
+        "Link to the absolute path:\n"
+        f"  {uri}"
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
+        '<Document>\n'
+        '  <name>Atlas — live view</name>\n'
+        '  <open>1</open>\n'
+        f'  <description>{_cdata(desc)}</description>\n'
+        '  <NetworkLink>\n'
+        '    <name>Sites (auto-refresh)</name>\n'
+        '    <open>1</open>\n'
+        '    <flyToView>0</flyToView>\n'
+        '    <Link>\n'
+        '      <href>atlas.kml</href>\n'
+        '      <refreshMode>onInterval</refreshMode>\n'
+        f'      <refreshInterval>{LIVE_REFRESH_SECONDS}</refreshInterval>\n'
+        '      <viewRefreshMode>never</viewRefreshMode>\n'
+        '    </Link>\n'
+        '  </NetworkLink>\n'
+        '</Document>\n'
+        '</kml>\n'
+    )
+
+
 def _geom_pairs(geom):
     """'lon,lat,alt lon,lat ...' -> [[lon,lat(,alt)], ...] as floats (RFC 7946 order)."""
     out = []
@@ -217,6 +267,11 @@ def main(argv):
         with open(p, "w", encoding="utf-8") as f:
             f.write(build_kml(sites, cats))
         wrote.append(p)
+        # Companion NetworkLink loader for a live Google Earth view (points at atlas.kml).
+        lp = os.path.join(atlas_root, "atlas-live.kml")
+        with open(lp, "w", encoding="utf-8") as f:
+            f.write(build_live_kml(atlas_root))
+        wrote.append(lp)
     if which in ("geojson", "both"):
         p = os.path.join(atlas_root, "atlas.geojson")
         with open(p, "w", encoding="utf-8") as f:

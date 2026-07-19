@@ -128,6 +128,15 @@ def main():
         # the exported KML actually carries LineString/Polygon geometry, not just points
         kml = open(os.path.join(a, "atlas.kml")).read()
         assert "<LineString>" in kml and "<Polygon>" in kml, "export flattened geometry to points"
+        # the live NetworkLink loader is emitted alongside atlas.kml, well-formed, relative href
+        import xml.etree.ElementTree as ET  # noqa: E402
+        live = os.path.join(a, "atlas-live.kml")
+        assert os.path.exists(live), "export did not emit atlas-live.kml"
+        ET.parse(live)  # raises if the loader is malformed XML
+        livetext = open(live).read()
+        assert "<NetworkLink>" in livetext and "<href>atlas.kml</href>" in livetext, \
+            "loader must be a NetworkLink pointing at the RELATIVE atlas.kml"
+        # a re-import must ignore the loader — it is not a site source
         run("import.py", b, canon, os.path.join(a, "atlas.kml"))
         s2 = load(b)
         assert set(s1) == set(s2), f"id sets differ: {set(s1)} vs {set(s2)}"
@@ -165,9 +174,20 @@ def main():
         assert merged.get("cadence") == "90d", f"[D] overlay reset: {merged.get('cadence')}"
         assert "]]>" in merged["description"], f"CDATA terminator lost on export: {merged['description']!r}"
 
+        # E) the watch loop's content-signature flips when a record's CONTENT changes
+        #    (what drives the hands-free re-export), and is stable under a pure touch.
+        import watch  # noqa: E402
+        sig0 = watch.signature(a, canon)
+        rec = sorted(glob.glob(os.path.join(a, "sites", "*", "site-*.md")))[0]
+        os.utime(rec, None)   # pure touch — mtime bumps, content identical
+        assert watch.signature(a, canon) == sig0, "signature moved on a content-less touch"
+        with open(rec, "a") as fh:
+            fh.write("\n<!-- watch change-detection probe -->\n")
+        assert watch.signature(a, canon) != sig0, "watch.signature did not detect a content change"
+
         print("✓ round-trip fixed-point gate GREEN — pristine identity, merge preservation, "
-              '"null" survival, multi-source, LineString+Polygon geometry, and '
-              'geometry-less skip all hold (5 features).')
+              '"null" survival, multi-source, LineString+Polygon geometry, geometry-less '
+              "skip, the live NetworkLink loader, and watch change-detection all hold.")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
