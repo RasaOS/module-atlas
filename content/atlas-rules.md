@@ -287,7 +287,7 @@ from time to place). These are the domain's, not the module's:
 |---|---|
 | A **verification clock** | `cadence:` + `last_verified:`, **default OFF** (a stone circle does not move; opt-in for live/threatened records) |
 | **Contested / held-open geography** | when two surveys give different coordinates or two authorities give different datings, both are held open rather than the last editor silently picking one |
-| A **cross-site sightline registry** | `aln-NNNN`: an alignment relates N sites and is owned by none — the natural home for **archaeoastronomical alignments** (a structure-to-star sightline and its precessing epoch) |
+| A **cross-site sightline registry** | `aln-NNNNNN`: **owned by `rasa.module.sightlines`** (not the domain — its fit-epoch/window are engine outputs; the domain overlays only `[D]` re-computation cadence). An alignment relates N sites and is owned by none; a structure-to-star sightline and its computed epoch. |
 | A **dated survey/observation axis** | dated observations bearing on N sites ("1965 survey recorded these 12", "2024 LIDAR revealed 3 features") |
 
 If a deployment wants these, it mounts a domain that provides them. Do not build

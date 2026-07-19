@@ -4,6 +4,18 @@ Reverse-chronological. Each entry is a version bump.
 
 ---
 
+## 0.1.1 — 2026-07-19
+
+### Doc reconciliation — the `aln-NNNN` sightline registry moves to `rasa.module.sightlines`
+
+- The cross-site sightline registry that v0.1.0's "what the consuming domain adds"
+  section reserved as `aln-NNNN` on the domain side is now **`aln-NNNNNN`, owned by
+  the new `rasa.module.sightlines`** (Model A: a fit-epoch/window is an engine output,
+  so record and compute cannot straddle an ownership boundary). `atlas-rules.md`,
+  `BUILD_PLAN.md`, and the `rasa.json` design note are repointed; the domain now
+  overlays only its `[D]` re-computation cadence over that module. **No behavioural or
+  installed-surface change** — atlas never implemented the registry.
+
 ## 0.1.0 — 2026-07-18
 
 Initial ship — a **portable geospatial catalog** (greenfield, author-requested;

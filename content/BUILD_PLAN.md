@@ -105,10 +105,13 @@ stays valid, the seam just falls silent.
 
 ## What the consuming domain adds (not here)
 
-`rasa.domain.proverbs` layers four disciplines additively: a verification clock
+`rasa.domain.proverbs` layers disciplines additively: a verification clock
 (`last_verified:`, default OFF — stone circles don't move), contested/held-open
-geography, a cross-site sightline registry (`aln-NNNN`, owned by no site — the
-home for archaeoastronomical alignment), and a dated survey/observation axis.
+geography, and a dated survey/observation axis. (The cross-site sightline registry
+this doc originally reserved as `aln-NNNN` on the domain side is now
+**`aln-NNNNNN`, owned by `rasa.module.sightlines`** — a fit-epoch/window is an engine
+output, so record and compute can't straddle an ownership boundary; the domain
+overlays only its `[D]` re-computation cadence over that module.)
 
 ## Skills
 
