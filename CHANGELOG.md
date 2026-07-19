@@ -4,6 +4,27 @@ Reverse-chronological. Each entry is a version bump.
 
 ---
 
+## 0.2.0 — 2026-07-19
+
+### Feature geometry — the atlas is now a point/line/polygon catalog (not point-only)
+
+- A site record gains two additive fields — **`geometry_type`** (`point` | `linestring`
+  | `polygon`) and **`geometry`** (the full coordinate string) — so a LineString keeps
+  every vertex (with a mid-vertex marker) and a Polygon keeps its outer ring (with a
+  centroid marker), instead of being flattened to a single dot. Points are unchanged
+  (`geometry_type: point`, no `geometry`).
+- **The KML importer** now reads `LineString` and `Polygon` (not just `Point`);
+  **the exporter** emits real `<LineString>`/`<Polygon>` KML and GeoJSON
+  `LineString`/`Polygon` geometry; **the color key** now carries `LineStyle` +
+  `PolyStyle` (same category colour) so lines and areas render coloured, and GeoJSON
+  gains `stroke`/`fill`. CSV gains optional `geometry_type`/`geometry` columns.
+- The round-trip fixed-point fixture now covers a LineString + a Polygon (geometry
+  survives import → export → re-import); a truly geometry-less placemark is still
+  skipped. `bin/check-manifest` + `test/roundtrip_test.py` GREEN.
+- Motivated by ingesting the Proverbs global-sites KML (167 lines + 61 polygons that
+  the v0.1 point-import had flattened). Additive, backward-compatible: existing point
+  records read/round-trip unchanged.
+
 ## 0.1.1 — 2026-07-19
 
 ### Doc reconciliation — the `aln-NNNN` sightline registry moves to `rasa.module.sightlines`

@@ -68,6 +68,19 @@ def _extdata(s):
     return f"<ExtendedData>{body}</ExtendedData>"
 
 
+def _geometry_kml(s):
+    """The KML geometry for a feature: its full LineString/Polygon when present,
+    else a Point at the representative marker. entry_id/geometry round-trip it back."""
+    gt = (s.get("geometry_type") or "point").lower()
+    geom = s.get("geometry")
+    if gt == "linestring" and geom:
+        return f"<LineString><tessellate>1</tessellate><coordinates>{escape(geom)}</coordinates></LineString>"
+    if gt == "polygon" and geom:
+        return ("<Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing>"
+                f"<coordinates>{escape(geom)}</coordinates></LinearRing></outerBoundaryIs></Polygon>")
+    return f"<Point><coordinates>{_coord_str(s)}</coordinates></Point>"
+
+
 def _placemark(s):
     parts = ["<Placemark>"]
     parts.append(f"  <name>{escape(s.get('name') or '')}</name>")
@@ -75,7 +88,7 @@ def _placemark(s):
     if s.get("description"):
         parts.append(f"  <description>{_cdata(s['description'])}</description>")
     parts.append(f"  {_extdata(s)}")
-    parts.append(f"  <Point><coordinates>{_coord_str(s)}</coordinates></Point>")
+    parts.append(f"  {_geometry_kml(s)}")
     parts.append("</Placemark>")
     return "\n".join(parts)
 
@@ -117,18 +130,43 @@ def build_kml(sites, cats):
     )
 
 
+def _geom_pairs(geom):
+    """'lon,lat,alt lon,lat ...' -> [[lon,lat(,alt)], ...] as floats (RFC 7946 order)."""
+    out = []
+    for tok in (geom or "").split():
+        p = tok.split(",")
+        if len(p) >= 2:
+            v = [float(p[0]), float(p[1])]
+            if len(p) > 2 and p[2].strip():
+                v.append(float(p[2]))
+            out.append(v)
+    return out
+
+
+def _geometry_geojson(s):
+    gt = (s.get("geometry_type") or "point").lower()
+    geom = s.get("geometry")
+    if gt == "linestring" and geom:
+        return {"type": "LineString", "coordinates": _geom_pairs(geom)}
+    if gt == "polygon" and geom:
+        return {"type": "Polygon", "coordinates": [_geom_pairs(geom)]}
+    coords = [float(s["lon"]), float(s["lat"])]
+    if s.get("alt") not in (None, "", "null"):
+        coords.append(float(s["alt"]))
+    return {"type": "Point", "coordinates": coords}
+
+
 def build_geojson(sites, cats):
     features = []
     for s in sites:
-        coords = [float(s["lon"]), float(s["lat"])]
-        if s.get("alt") not in (None, "", "null"):
-            coords.append(float(s["alt"]))
+        color = cats[s["category"]]["color"]
+        gt = (s.get("geometry_type") or "point").lower()
         props = {
             "name": s.get("name") or "",
             "category": s.get("category", ""),
-            "marker-color": cats[s["category"]]["color"],
+            "marker-color": color, "stroke": color, "fill": color,
             "marker-symbol": cats[s["category"]].get("symbol", ""),
-            "entry_id": s["id"],
+            "entry_id": s["id"], "geometry_type": gt,
         }
         if s.get("sources"):
             props["sources"] = s["sources"]
@@ -138,7 +176,7 @@ def build_geojson(sites, cats):
             props["description"] = s["description"]
         features.append({
             "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": coords},
+            "geometry": _geometry_geojson(s),
             "properties": props,
         })
     return json.dumps({"type": "FeatureCollection", "features": features},

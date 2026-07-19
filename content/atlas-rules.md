@@ -103,9 +103,11 @@ cites located records. The human name lives in the correctable `name:` field.
 id: site-000042            # [M] IMMUTABLE — assigned once (highest+1), never recycled; filename == id
 name: "Spring 12"          # [M] correctable human label; "" is legal (an unnamed feature)
 category: water-source     # [M] the ONE classifier + the color-key join (a field, never a folder)
-lon: -119.417900           # [M] canonical geometry — full precision, ONE true copy, LON FIRST
-lat:  36.778300            # [M]
+lon: -119.417900           # [M] the representative MARKER point — full precision, LON FIRST
+lat:  36.778300            # [M]   (a point: the point; a line: its mid-vertex; a polygon: its centroid)
 alt:  0                    # [M] metres; null if the source has none (never invent 0)
+geometry_type: point       # [M] point | linestring | polygon  (v0.2 — a feature catalog, not point-only)
+geometry:                  # [M] the FULL shape for a line/polygon: "lon,lat lon,lat …"; empty for a point
 coord_precision: exact     # [M] exact | approximate | rough | unknown — intrinsic to a located record
 status: active             # [M] active | provisional | retired: "<reason>"   (nothing is deleted)
 tags: [perennial]          # [M] reused substrate layer — flat matching / discovery

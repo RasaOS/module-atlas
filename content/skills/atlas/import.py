@@ -14,7 +14,7 @@ Usage:
 - Category from ExtendedData/column `category` if present, else resolved from the
   placemark's observed color against the seam, else STAGED (never halts a bulk
   load). Staged categories + near-duplicates are reported, not auto-resolved.
-- A placemark with no point coordinates is skipped and reported (atlas is a point
+- A placemark with no coordinates/geometry is skipped and reported (atlas is a feature
   catalog). One bad input file is reported and skipped, not fatal.
 - Writes one file per placemark/row. Stages files; the human commits.
 
@@ -125,6 +125,55 @@ def read_kml(path):
     return out
 
 
+def _parse_coords(text):
+    """'lon,lat,alt lon,lat ...' -> [(lon,lat,alt|None), ...] (strings, order preserved)."""
+    out = []
+    for tok in (text or "").split():
+        p = tok.split(",")
+        if len(p) >= 2 and p[0].strip() and p[1].strip():
+            out.append((p[0].strip(), p[1].strip(),
+                        p[2].strip() if len(p) > 2 and p[2].strip() else None))
+    return out
+
+
+def _find_deep(el, name):
+    for d in el.iter():
+        if _local(d.tag) == name:
+            return d
+    return None
+
+
+def _geom_str(coords):
+    return " ".join(",".join(x for x in v if x is not None) for v in coords)
+
+
+def _extract_geometry(pm):
+    """-> (geometry_type, geometry_str|None, rep_lon, rep_lat, rep_alt). A LineString
+    keeps its full vertex list in geometry_str with a mid-vertex marker; a Polygon
+    keeps its outer ring with a centroid marker; a Point is just a marker."""
+    pt = _find(pm, "Point")
+    if pt is not None:
+        c = _parse_coords(_text(pt, "coordinates"))
+        if c:
+            return "point", None, c[0][0], c[0][1], c[0][2]
+    ls = _find(pm, "LineString")
+    if ls is not None:
+        c = _parse_coords(_text(ls, "coordinates"))
+        if len(c) >= 2:
+            mid = c[len(c) // 2]                       # deterministic representative marker
+            return "linestring", _geom_str(c), mid[0], mid[1], mid[2]
+    poly = _find(pm, "Polygon")
+    if poly is not None:
+        ring = _find_deep(poly, "LinearRing")
+        c = _parse_coords(_text(ring, "coordinates")) if ring is not None else []
+        if len(c) >= 3:
+            lons = [float(v[0]) for v in c]
+            lats = [float(v[1]) for v in c]
+            return "polygon", _geom_str(c), \
+                "%.6f" % (sum(lons) / len(lons)), "%.6f" % (sum(lats) / len(lats)), None
+    return "point", None, None, None, None
+
+
 def _placemark(pm, folders, style_colors):
     ext, source_list, category, entry_id, coord_precision = {}, [], "", None, ""
     ed = _find(pm, "ExtendedData")
@@ -146,19 +195,12 @@ def _placemark(pm, folders, style_colors):
                 coord_precision = v
             else:
                 ext[k] = v
-    lon = lat = alt = None
-    pt = _find(pm, "Point")
-    if pt is not None:
-        coord = _text(pt, "coordinates")
-        if coord:
-            parts = coord.strip().split()[0].split(",") if coord.strip() else []
-            lon = parts[0].strip() if len(parts) > 0 and parts[0].strip() else None
-            lat = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
-            alt = parts[2].strip() if len(parts) > 2 and parts[2].strip() else None
+    gtype, geom, lon, lat, alt = _extract_geometry(pm)
     style_url = _text(pm, "styleUrl")
     return {
         "name": _text(pm, "name"), "description": _text(pm, "description"),
         "style_url": style_url, "lon": lon, "lat": lat, "alt": alt,
+        "geometry_type": gtype, "geometry": geom,
         "folder_path": folders, "ext": ext, "source_list": source_list,
         "category": category, "entry_id": entry_id, "coord_precision": coord_precision,
         "observed_kml_color": style_colors.get(style_url, ""),
@@ -168,7 +210,8 @@ def _placemark(pm, folders, style_colors):
 # ---- tabular (CSV / XLSX) -------------------------------------------------
 
 _TAB_MAPPED = {"name", "lon", "lat", "alt", "category", "description",
-               "sources", "source", "coord_precision", "entry_id"}
+               "sources", "source", "coord_precision", "entry_id",
+               "geometry_type", "geometry"}
 
 
 def _row_to_rec(row):
@@ -183,6 +226,8 @@ def _row_to_rec(row):
         "ext": ext, "source_list": source_list, "category": row.get("category", ""),
         "entry_id": row.get("entry_id") or None,
         "coord_precision": row.get("coord_precision", ""),
+        "geometry_type": row.get("geometry_type") or "point",
+        "geometry": row.get("geometry") or None,
     }
 
 
@@ -258,6 +303,8 @@ def build_site(rec, source_file, source_type, next_id, cats, atlas_root):
         "category": category,
         "lon": rec["lon"], "lat": rec["lat"],
         "alt": rec["alt"] if rec["alt"] not in (None, "") else None,
+        "geometry_type": rec.get("geometry_type") or "point",
+        "geometry": rec.get("geometry") or None,
         "coord_precision": rec.get("coord_precision") or "unknown",
         "status": "active",
         "tags": [], "related": [], "sources": list(rec.get("source_list") or []),
@@ -344,7 +391,7 @@ def main(argv):
         for c, n in sorted(staged_cats.items()):
             print(f"      {c}  ({n} site(s))")
     if no_coord:
-        print("\n  ⚠ skipped (no point coordinates — atlas is a point catalog):")
+        print("\n  ⚠ skipped (no coordinates / geometry):")
         for src, nm in no_coord:
             print(f"      {nm}  [{src}]")
     if dups:

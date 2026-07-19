@@ -136,9 +136,9 @@ def load_categories(atlas_canon_path):
 # Frontmatter key order (module-owned fields; [D] domain fields appended by the
 # consuming domain are preserved verbatim on read but never emitted by the tool).
 FM_ORDER = [
-    "id", "name", "category", "lon", "lat", "alt", "coord_precision",
-    "status", "tags", "related", "sources", "folder_path", "graduated_to",
-    "provenance", "extended",
+    "id", "name", "category", "lon", "lat", "alt", "geometry_type", "geometry",
+    "coord_precision", "status", "tags", "related", "sources", "folder_path",
+    "graduated_to", "provenance", "extended",
 ]
 NESTED = ("provenance", "extended")
 LISTS = ("tags", "related", "sources", "folder_path")
@@ -149,8 +149,9 @@ LISTS = ("tags", "related", "sources", "folder_path")
 # (cadence, last_verified) — is authored and MUST be preserved on re-import
 # (see import.build_site merge), so re-importing never un-retires / un-graduates
 # / un-tags a real site.
-SOURCE_FIELDS = {"id", "name", "category", "lon", "lat", "alt",
-                 "folder_path", "extended", "provenance", "sources", "description"}
+SOURCE_FIELDS = {"id", "name", "category", "lon", "lat", "alt", "geometry_type",
+                 "geometry", "folder_path", "extended", "provenance", "sources",
+                 "description"}
 
 _SAFE = re.compile(r"^[A-Za-z0-9_./:+-]+$")
 

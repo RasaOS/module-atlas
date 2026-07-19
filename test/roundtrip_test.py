@@ -32,7 +32,7 @@ ATLAS = os.path.join(HERE, "..", "content", "skills", "atlas")
 sys.path.insert(0, ATLAS)
 import lib  # noqa: E402
 
-STABLE = ["id", "name", "category", "lon", "lat", "alt",
+STABLE = ["id", "name", "category", "lon", "lat", "alt", "geometry_type", "geometry",
           "folder_path", "sources", "extended", "description"]
 
 SEAM = """# Atlas Canon
@@ -70,9 +70,16 @@ HARD_KML = """<?xml version="1.0" encoding="UTF-8"?>
     <name>Old Platform</name><styleUrl>#structForm</styleUrl>
     <Point><coordinates>10.500000,45.250000</coordinates></Point>
   </Placemark>
-  <Placemark><name>No Point Here</name>
-    <LineString><coordinates>0,0 1,1</coordinates></LineString>
+  <Placemark><name>Ley Line</name>
+    <ExtendedData><Data name="category"><value>structure</value></Data></ExtendedData>
+    <LineString><coordinates>1,2 3,4,10 5,6</coordinates></LineString>
   </Placemark>
+  <Placemark><name>Enclosure</name>
+    <ExtendedData><Data name="category"><value>water-source</value></Data></ExtendedData>
+    <Polygon><outerBoundaryIs><LinearRing>
+      <coordinates>0,0 0,1 1,1 1,0 0,0</coordinates></LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>
+  <Placemark><name>No Geometry</name></Placemark>
 </Document></kml>
 """
 
@@ -104,12 +111,23 @@ def main():
 
         a, b = os.path.join(tmp, "a"), os.path.join(tmp, "b")
 
-        # A) pristine fixed point
+        # A) pristine fixed point — points + a LineString + a Polygon; a geometry-less
+        #    placemark is skipped
         out = run("import.py", a, canon, src)
         s1 = load(a)
-        assert len(s1) == 3, f"expected 3 sites (1 no-Point skipped), got {len(s1)}"
-        assert "no point coordinates" in out.lower(), "no-coord skip not reported"
+        assert len(s1) == 5, f"expected 5 features (3 points + line + polygon), got {len(s1)}"
+        assert "no coordinates" in out.lower(), "geometry-less skip not reported"
+        # geometry captured, not flattened
+        line = next(x for x in s1.values() if x["name"] == "Ley Line")
+        assert line["geometry_type"] == "linestring" and line["geometry"] == "1,2 3,4,10 5,6", line
+        assert (line["lon"], line["lat"], line["alt"]) == ("3", "4", "10"), \
+            f"line marker should be the mid-vertex: {line['lon']},{line['lat']},{line['alt']}"
+        poly = next(x for x in s1.values() if x["name"] == "Enclosure")
+        assert poly["geometry_type"] == "polygon" and poly["geometry"] == "0,0 0,1 1,1 1,0 0,0", poly
         run("export.py", a, canon, "both")
+        # the exported KML actually carries LineString/Polygon geometry, not just points
+        kml = open(os.path.join(a, "atlas.kml")).read()
+        assert "<LineString>" in kml and "<Polygon>" in kml, "export flattened geometry to points"
         run("import.py", b, canon, os.path.join(a, "atlas.kml"))
         s2 = load(b)
         assert set(s1) == set(s2), f"id sets differ: {set(s1)} vs {set(s2)}"
@@ -148,7 +166,8 @@ def main():
         assert "]]>" in merged["description"], f"CDATA terminator lost on export: {merged['description']!r}"
 
         print("✓ round-trip fixed-point gate GREEN — pristine identity, merge preservation, "
-              '"null" survival, multi-source, and no-coord skip all hold (3 sites).')
+              '"null" survival, multi-source, LineString+Polygon geometry, and '
+              'geometry-less skip all hold (5 features).')
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

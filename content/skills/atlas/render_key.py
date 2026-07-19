@@ -22,17 +22,24 @@ def kml_styles(cats):
     parts = []
     for key in sorted(cats):
         meta = cats[key]
-        col = lib.rgb_to_kml(meta["color"])
+        col = lib.rgb_to_kml(meta["color"])                 # ff + bb + gg + rr (opaque)
+        fill = "80" + col[2:]                               # ~50% alpha for polygon fill
         href = f"http://maps.google.com/mapfiles/kml/{meta.get('kml_icon', 'paddle/wht-blank')}.png"
+        # One style serves all three geometries of the category: points (IconStyle),
+        # lines/connections (LineStyle), and areas (PolyStyle) — same colour.
         parts.append(
             f'<Style id="cat-{key}-normal">\n'
             f'  <IconStyle><color>{col}</color><scale>1.1</scale>'
             f'<Icon><href>{href}</href></Icon></IconStyle>\n'
             f'  <LabelStyle><color>{col}</color></LabelStyle>\n'
+            f'  <LineStyle><color>{col}</color><width>2</width></LineStyle>\n'
+            f'  <PolyStyle><color>{fill}</color></PolyStyle>\n'
             f'</Style>\n'
             f'<Style id="cat-{key}-highlight">\n'
             f'  <IconStyle><color>{col}</color><scale>1.4</scale>'
             f'<Icon><href>{href}</href></Icon></IconStyle>\n'
+            f'  <LineStyle><color>{col}</color><width>3</width></LineStyle>\n'
+            f'  <PolyStyle><color>{fill}</color></PolyStyle>\n'
             f'</Style>\n'
             f'<StyleMap id="cat-{key}">\n'
             f'  <Pair><key>normal</key><styleUrl>#cat-{key}-normal</styleUrl></Pair>\n'
