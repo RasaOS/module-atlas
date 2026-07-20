@@ -117,9 +117,35 @@ def _emit_tree(node, indent=1):
     return "\n".join(out)
 
 
+# Geometry layers, each a top-level KML <Folder> so Google Earth can toggle it in Places
+# (uncheck Lines + Areas to see markers only). Tagged with an `atlas:layer` Data element
+# so the importer knows it is a VIEW wrapper and keeps it out of folder_path — the
+# round-trip fixed point survives the grouping.
+LAYERS = (("point", "Markers"), ("linestring", "Lines"), ("polygon", "Areas"))
+LAYER_TAG = "atlas:layer"
+
+
+def _layer_of(s):
+    """Bucket a site into exactly one layer — anything unrecognised falls back to
+    'point' so a site can never be silently dropped from the export."""
+    gt = (s.get("geometry_type") or "point").lower()
+    return gt if gt in ("linestring", "polygon") else "point"
+
+
 def build_kml(sites, cats):
     styles = render_key.kml_styles(cats)
-    body = _emit_tree(_folder_tree(sites))
+    chunks = []
+    for gt, label in LAYERS:
+        group = [s for s in sites if _layer_of(s) == gt]
+        if not group:
+            continue
+        chunks.append(
+            f'<Folder>\n<name>{escape(label)}</name>\n<open>0</open>\n'
+            f'<ExtendedData><Data name="{LAYER_TAG}"><value>{gt}</value></Data></ExtendedData>\n'
+            f'{_emit_tree(_folder_tree(group))}\n'
+            f'</Folder>'
+        )
+    body = "\n".join(chunks)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<kml xmlns="http://www.opengis.net/kml/2.2">\n'

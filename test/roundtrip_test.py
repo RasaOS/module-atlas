@@ -128,6 +128,11 @@ def main():
         # the exported KML actually carries LineString/Polygon geometry, not just points
         kml = open(os.path.join(a, "atlas.kml")).read()
         assert "<LineString>" in kml and "<Polygon>" in kml, "export flattened geometry to points"
+        # geometry LAYERS — toggleable Markers/Lines/Areas folders, each machine-tagged so a
+        # re-import keeps them OUT of folder_path (the fixed point must survive the grouping)
+        for lbl in ("Markers", "Lines", "Areas"):
+            assert f"<name>{lbl}</name>" in kml, f"export did not emit the '{lbl}' layer folder"
+        assert kml.count('name="atlas:layer"') == 3, "each layer folder must carry the atlas:layer tag"
         # the live NetworkLink loader is emitted alongside atlas.kml, well-formed, relative href
         import xml.etree.ElementTree as ET  # noqa: E402
         live = os.path.join(a, "atlas-live.kml")
@@ -140,6 +145,10 @@ def main():
         run("import.py", b, canon, os.path.join(a, "atlas.kml"))
         s2 = load(b)
         assert set(s1) == set(s2), f"id sets differ: {set(s1)} vs {set(s2)}"
+        # the layer wrappers must NOT leak into any re-imported folder_path
+        for sid, s in s2.items():
+            leak = {"Markers", "Lines", "Areas"} & set(s.get("folder_path") or [])
+            assert not leak, f"layer wrapper {leak} leaked into folder_path of {sid}: {s['folder_path']}"
         for sid in s1:
             assert stable(s1[sid]) == stable(s2[sid]), \
                 f"FIXED POINT broke on {sid}:\n  {stable(s1[sid])}\n  {stable(s2[sid])}"
@@ -187,7 +196,8 @@ def main():
 
         print("✓ round-trip fixed-point gate GREEN — pristine identity, merge preservation, "
               '"null" survival, multi-source, LineString+Polygon geometry, geometry-less '
-              "skip, the live NetworkLink loader, and watch change-detection all hold.")
+              "skip, toggleable geometry layers (no folder_path leak), the live NetworkLink "
+              "loader, and watch change-detection all hold.")
         return 0
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

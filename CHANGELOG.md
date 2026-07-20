@@ -4,6 +4,25 @@ Reverse-chronological. Each entry is a version bump.
 
 ---
 
+## 0.4.0 — 2026-07-19
+
+### Toggleable geometry layers — see markers only, with one checkbox
+
+- A KML export now groups features into three top-level folders — **`Markers` / `Lines` /
+  `Areas`** — so Google Earth's Places panel can switch each geometry layer on and off
+  independently (uncheck Lines + Areas to see markers only). Folders ship `<open>0</open>`
+  so a 1,000-feature Places tree stays tidy.
+- **The round-trip is preserved.** Each layer folder carries an `atlas:layer` `<Data>` tag,
+  and the importer treats a so-tagged folder as a VIEW wrapper — walking through it without
+  adding its name to `folder_path`. Detection is by the machine tag, **not by folder name**,
+  so a genuine source folder called "Lines" is still preserved verbatim. Without this, a
+  re-import would inject "Markers" into every record and break the fixed point.
+- Bucketing is defensive: any unrecognised `geometry_type` falls back to the `Markers`
+  layer, so a site can never be silently dropped from the export.
+- Gate extended: asserts all three layer folders are emitted and tagged, and that no layer
+  name leaks into any re-imported `folder_path`. `bin/check-manifest` + round-trip gate GREEN.
+- GeoJSON is unchanged — it has no folder concept; filter on the `geometry_type` property.
+
 ## 0.3.0 — 2026-07-19
 
 ### Live Google Earth view — a NetworkLink loader + a re-export-on-save watch loop

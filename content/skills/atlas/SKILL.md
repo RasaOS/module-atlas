@@ -43,6 +43,8 @@ Run the helpers from `.claude/skills/atlas/` (paths relative to the project root
 - **`/atlas export [kml|geojson|both]`** — `python3 .claude/skills/atlas/export.py <root> <canon> [both]`.
   Writes `atlas/atlas.kml` + `atlas/atlas.geojson`, and (on `kml`/`both`) a companion
   `atlas/atlas-live.kml` — a Google Earth NetworkLink loader for a live-updating view.
+  The KML groups features into toggleable `Markers`/`Lines`/`Areas` layer folders (tagged
+  `atlas:layer`, kept out of `folder_path`) so the user can show markers only.
   Hard-stops on an unknown category — surface the list, stop, ask the user to add them
   to the seam.
 - **`/atlas watch [interval]`** — `python3 .claude/skills/atlas/watch.py <root> <canon> [interval]`.

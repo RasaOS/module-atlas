@@ -239,6 +239,13 @@ lossless conversion of thousands of rows must be code, or they silently drift.
   geometry `[lon,lat,alt]`; `properties` carries `name`, `category`,
   `marker-color` (from the palette), `entry_id`, and the `extended` bag
   (simplestyle-spec, honored by GitHub/Mapbox).
+- **Geometry layers** — a KML export groups features into three top-level folders,
+  **`Markers` / `Lines` / `Areas`**, so Google Earth can toggle each geometry on and off
+  (uncheck Lines + Areas for markers only). Each carries an `atlas:layer` `<Data>` tag; the
+  importer walks *through* a so-tagged folder without adding it to `folder_path`, so the
+  round-trip fixed point survives the grouping. Detection is by the tag, never the name — a
+  real source folder called "Lines" still round-trips verbatim. GeoJSON has no folders;
+  filter on the `geometry_type` property instead.
 - **Live loader** — a KML export also writes `atlas/atlas-live.kml`, a Google Earth
   **NetworkLink** that re-reads `atlas.kml` on an interval. Open it once in Google
   Earth **Pro** (local network links are unsupported in Google Earth Web) and a

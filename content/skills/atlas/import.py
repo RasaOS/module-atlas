@@ -56,6 +56,20 @@ def _text(el, name):
     return (c.text or "").strip() if c is not None else ""
 
 
+# The exporter groups features into top-level Markers/Lines/Areas folders so Google Earth
+# can toggle each geometry layer. Those folders are a VIEW wrapper, tagged with an
+# `atlas:layer` Data element — never part of a site's folder_path. Detected by the machine
+# tag, not by name, so a real source folder called "Lines" is still preserved verbatim.
+LAYER_TAG = "atlas:layer"
+
+
+def _is_layer_folder(el):
+    ed = _find(el, "ExtendedData")
+    if ed is None:
+        return False
+    return any((d.get("name") or "") == LAYER_TAG for d in _findall(ed, "Data"))
+
+
 def slugify(s):
     return re.sub(r"[^a-z0-9]+", "-", s.strip().lower()).strip("-") or "uncategorized"
 
@@ -114,6 +128,9 @@ def read_kml(path):
         for c in el:
             t = _local(c.tag)
             if t == "Folder":
+                if _is_layer_folder(c):
+                    walk(c, folders)          # geometry-layer wrapper — never in folder_path
+                    continue
                 nm = _text(c, "name")
                 walk(c, folders + ([nm] if nm else []))
             elif t == "Document":
